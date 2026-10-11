@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>大阪 駅間ウォーク</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="駅間ウォーク">
+<meta name="theme-color" content="#F2F4F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F141A" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Azeret+Mono:wght@500;700&display=swap">
+<style>
+
+/* Layout: signage-style header with company progress, then one route strip per line (horizontal scroll), bottom sheet for recording */
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --ink:#17202B; --muted:#687482; --rule:#D8DDE3; --track:#B9C1CA; --hl:#FFE27A; --ok:#1F8A4C;
+  --f-body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --f-num:"Azeret Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F141A;--surface:#18202A;--ink:#E7ECF1;--muted:#8D98A5;--rule:#2B3542;--track:#4A5563;--hl:#6B5A10;--ok:#4CC27E;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F141A;--surface:#18202A;--ink:#E7ECF1;--muted:#8D98A5;--rule:#2B3542;--track:#4A5563;--hl:#6B5A10;--ok:#4CC27E;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:20px 120px;display:flex;flex-direction:column;gap:18px}
+header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:start}
+@media (max-width:760px){header{grid-template-columns:1fr}}
+.brand h1{margin:0;font-weight:900;font-size:clamp(28px,5vw,40px);letter-spacing:.02em;line-height:1.15;text-wrap:balance}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:44ch}
+.big{display:flex;align-items:baseline;gap:10px;margin-top:14px;flex-wrap:wrap}
+.big b{font-family:var(--f-num);font-size:clamp(34px,6vw,48px);font-weight:700;line-height:1}
+.big span{font-family:var(--f-num);color:var(--muted)}
+.big em{font-style:normal;font-family:var(--f-num);font-weight:700;background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:4px}
+.cos{display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:8px}
+.co{display:grid;grid-template-columns:7.5em minmax(0,1fr) 5.5em;align-items:center;gap:10px;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-align:left;padding:5px 8px;border-radius:6px;cursor:pointer}
+.co:hover{background:var(--bg)}
+.co[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.co .bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden}
+.co .bar i{display:block;height:100%;background:var(--ok)}
+.co[aria-pressed="true"] .bar{background:color-mix(in srgb,var(--bg) 30%,transparent)}
+.co .n{font-family:var(--f-num);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tools input[type=search]{flex:1 1 220px;min-width:0;font:inherit;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);color:var(--ink)}
+.tools label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+.notice{font-size:13px;padding:10px 12px;border-radius:8px;border:1px dashed var(--track);color:var(--muted)}
+.lines{display:flex;flex-direction:column;gap:12px}
+.line{background:var(--surface);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.lh{display:flex;align-items:center;gap:10px;padding:10px 14px 4px}
+.badge{flex:none;width:30px;height:30px;border-radius:50%;border:4px solid var(--lc);display:grid;place-items:center;font-family:var(--f-num);font-weight:700;font-size:12px;background:var(--surface)}
+.lh h2{margin:0;font-size:16px;font-weight:700;min-width:0}
+.lh small{color:var(--muted);font-size:12px;font-weight:500;margin-left:6px}
+.lh .cnt{margin-left:auto;font-family:var(--f-num);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lh .cnt.done{color:var(--ok);font-weight:700}
+.scroller{overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.track{display:flex;align-items:flex-start;width:max-content;padding:10px 16px 8px}
+.st{width:22px;display:flex;flex-direction:column;align-items:center;flex:none}
+.dot{width:16px;height:16px;border-radius:50%;background:var(--surface);border:3px solid var(--lc)}
+.dot.xf{width:20px;border-radius:6px;border-color:var(--ink);border-width:3px}
+.nm{writing-mode:vertical-rl;font-size:12.5px;font-weight:500;margin-top:6px;letter-spacing:.06em;white-space:nowrap;padding:2px 0;border-radius:3px}
+.nm.hit{background:var(--hl)}
+.sg{flex:none;width:30px;height:34px;margin-top:-9px;border:0;padding:0;background:none;cursor:pointer;position:relative}
+.sg::before{content:"";position:absolute;left:-2px;right:-2px;top:50%;height:4px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,var(--track) 0 5px,transparent 5px 9px)}
+.sg.on::before{height:8px;background:var(--lc)}
+.sg:hover::before{outline:2px solid var(--ink);outline-offset:3px}
+.sg:focus-visible{outline:2px solid var(--ink);outline-offset:1px;border-radius:4px}
+.sg.sel::before{outline:2px solid var(--ink);outline-offset:3px}
+.log{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:12px 14px}
+.log h3{margin:0 0 6px;font-size:13px;letter-spacing:.08em;color:var(--muted)}
+.log ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.log li{display:grid;grid-template-columns:5.5em 10px minmax(0,1fr);gap:8px;align-items:center;font-size:13.5px;padding:5px 0;border-top:1px solid var(--rule)}
+.log li:first-child{border-top:0}
+.log .d{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.log .sw{width:10px;height:10px;border-radius:50%;background:var(--lc)}
+.log .who{color:var(--muted);font-size:12px}
+.empty{color:var(--muted);font-size:13px}
+/* sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--rule);box-shadow:0 -10px 30px rgba(0,0,0,.18);padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet .in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.sh-top{display:flex;align-items:flex-start;gap:10px}
+.sh-top .ttl{min-width:0}
+.sh-top .ttl div{font-size:20px;font-weight:900;line-height:1.3}
+.sh-top .ttl small{color:var(--muted);font-size:12px}
+.x{margin-left:auto;border:1px solid var(--rule);background:none;color:var(--ink);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;flex:none}
+.state{font-size:13px;font-weight:700}
+.state.on{color:var(--ok)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row label{font-size:12px;color:var(--muted)}
+.row input[type=date],.sheet textarea{font:inherit;padding:7px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)}
+.sheet textarea{width:100%;min-height:52px;resize:vertical}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 10px 3px 4px;font:inherit;font-size:13px;cursor:pointer}
+.chip img{width:22px;height:22px;border-radius:50%}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border-radius:8px;padding:10px 16px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--bg)}
+.btn.ghost{background:none;color:var(--ink);border-color:var(--rule)}
+.btn.warn{background:none;color:#C0392B;border-color:#C0392B}
+.btn:disabled{opacity:.5;cursor:default}
+.msg{font-size:12px;color:var(--muted);min-height:1em}
+.ov{position:fixed;inset:0;z-index:20;background:rgba(10,14,20,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.ov-in{background:var(--surface);border-radius:12px;max-width:960px;width:100%;max-height:100%;display:flex;flex-direction:column;gap:10px;padding:14px}
+.ov-top{display:flex;align-items:center;gap:10px}
+.ov-top small{color:var(--muted);font-size:12px;min-width:0}
+.ov-img{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:#fff;min-height:0;flex:1}
+.ov-img img{display:block;max-width:none;width:100%}
+footer{font-size:12px;color:var(--muted);line-height:1.7}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(20px);opacity:.6}}}
+
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%}
+.addname{display:flex;gap:6px;align-items:center}
+.addname input{font:inherit;font-size:13px;padding:4px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--bg);color:var(--ink);width:9em}
+.addname button{font:inherit;font-size:13px;border:1px solid var(--rule);background:none;color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer}
+.chip.nm-only{padding-left:10px}
+.sync{font-size:12px;color:var(--muted)}
+button.st{border:0;background:none;padding:0 0 6px;margin:0;cursor:pointer;color:inherit;font:inherit;border-radius:6px;width:26px}
+button.st:focus-visible{outline:2px solid var(--ink)}
+.st .dot{transition:transform .12s}
+.st.pick .dot{background:var(--ink);transform:scale(1.3)}
+.st.pick .nm{background:var(--hl);font-weight:700}
+.sg{width:34px}
+.pickbar{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--ink);color:var(--bg);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;font-size:14px;line-height:1.4}
+.pickbar{flex-wrap:wrap}
+.pk-txt{flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pk-txt small{opacity:.8;font-size:12px}
+.pk-btns{display:flex;gap:8px;margin-left:auto}
+.pickbar .pk-btns button{margin-left:0}
+.pickbar button.go{background:var(--bg);color:var(--ink)}
+.sg.route::before{outline:2px dashed var(--ink);outline-offset:3px}
+.log-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.log-h h3{margin:0}
+.lk{margin-left:auto;font:inherit;font-size:13px;font-weight:700;border:1px solid var(--rule);background:none;color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer}
+.lk[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#log li.wk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:start;padding:10px 0}
+.wk .chk{display:none;padding-top:2px}
+.selmode .wk .chk{display:block}
+.selmode #log li.wk{grid-template-columns:auto minmax(0,1fr)}
+.wk .chk input{width:20px;height:20px}
+.wk-main{min-width:0;display:flex;flex-direction:column;gap:3px}
+.wk-t{font-weight:700;font-size:14.5px;line-height:1.4;overflow-wrap:anywhere}
+.wk-sub{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.wk-sub .lc{display:inline-flex;align-items:center;gap:4px;color:var(--ink)}
+.wk-sub .lc::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--lc)}
+.wk-sub .dt{font-family:var(--f-num);color:var(--ink)}
+.wk-note{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.wk-btns{display:flex;gap:6px}
+.wk-btns button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--rule);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.wk-btns button.del{color:#C0392B}
+.wk-btns button.del.arm{background:#C0392B;color:#fff;border-color:#C0392B}
+.selmode .wk-btns{display:none}
+.log-f{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.log-f .lk{margin:0 auto 0 0}
+.bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+.bulk .btn{margin-left:auto}
+.views{display:flex;gap:0;border:1px solid var(--rule);border-radius:10px;overflow:hidden;align-self:flex-start;background:var(--surface)}
+.views button{font:inherit;font-size:14px;font-weight:700;border:0;background:none;color:var(--muted);padding:8px 16px;cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.mapbox{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+#map{display:block;width:100%;height:min(72vh,680px);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.ms{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-width:2.5;opacity:.33}
+.ms.on{stroke-width:6.5;opacity:1}
+.mr{fill:none;stroke:var(--ink);stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-width:3;stroke-dasharray:5 5}
+.mr.free{stroke:var(--muted);stroke-dasharray:1 6;stroke-width:3}
+.mn{fill:var(--surface);stroke:var(--ink)}
+.mn.pick{fill:var(--hl)}
+.mn.hit{fill:var(--hl)}
+.ml{fill:var(--ink);stroke:var(--surface);paint-order:stroke;stroke-linejoin:round;font-family:var(--f-body);font-weight:500;pointer-events:none}
+.ml.pk{font-weight:900}
+.mapctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{font:inherit;font-weight:700;min-width:44px;height:40px;border-radius:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.maplegend{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--surface) 85%,transparent);padding:4px 8px;border-radius:6px;display:flex;gap:10px;align-items:center}
+.maplegend i{display:inline-block;width:22px;border-top:6px solid var(--ink);border-radius:3px;vertical-align:middle;margin-right:4px}
+.maplegend i.thin{border-top:2px solid var(--muted);opacity:.6}
+.pickbar button{margin-left:auto;flex:none;font:inherit;font-weight:700;border:1px solid var(--bg);background:none;color:var(--bg);border-radius:8px;padding:6px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>大阪 駅間ウォーク</h1>
+      <p>大阪府内の鉄道を、となりの駅まで歩いて制覇する記録。歩いた順に駅をタップすると、通った区間をまとめて記録できます。乗り換えた駅もタップすれば、路線をまたいでつながります。地図は指で動かし、2本指で拡大できます。</p>
+      <div class="big"><b id="tW">0</b><span>/ <span id="tT">0</span> 区間</span><em id="tP">0.0%</em></div>
+      <div class="sync" id="sync">記録を読み込み中…</div>
+    </div>
+    <div class="cos" id="cos" role="group" aria-label="会社で絞り込み"></div>
+  </header>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="駅名で探す（例：天王寺）" aria-label="駅名で探す">
+    <label><input type="checkbox" id="onlyLeft"> 未踏の区間がある路線だけ</label>
+    <button class="btn ghost" id="imgBtn" type="button">路線図を画像で保存</button>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="views" role="group" aria-label="表示の切り替え"><button type="button" id="vMap" aria-pressed="true">地図で見る</button><button type="button" id="vList" aria-pressed="false">路線ごとに見る</button></div>
+  <section class="mapbox" id="mapBox">
+    <svg id="map" aria-label="大阪府内の路線網図"><g id="mg"><g id="mSeg"></g><g id="mRoute"></g><g id="mNodes"></g><g id="mLabels"></g></g></svg>
+    <div class="mapctl"><button type="button" id="zIn" aria-label="拡大">＋</button><button type="button" id="zOut" aria-label="縮小">−</button><button type="button" id="zCity">市内</button><button type="button" id="zAll">全体</button></div>
+    <div class="maplegend"><span><i></i>歩いた</span><span><i class="thin"></i>まだ</span></div>
+  </section>
+
+  <div class="ov" id="ov" hidden>
+    <div class="ov-in">
+      <div class="ov-top"><b>路線図の画像</b><small id="ovInfo"></small><button class="x" id="ovX" aria-label="閉じる">✕</button></div>
+      <div class="ov-img"><img id="ovImg" alt="歩いた区間を塗った路線図"></div>
+      <div class="btns"><a class="btn" id="ovSave" download="osaka-walk.png" href="#">PNGで保存</a></div>
+      <div class="msg">保存できないときは、画像を長押し（パソコンは右クリック）して保存してください。</div>
+    </div>
+  </div>
+
+  <section class="log" id="logBox">
+    <div class="log-h"><h3>歩いた記録</h3><button type="button" class="lk" id="selMode">選んで消す</button></div>
+    <ol id="log"></ol>
+    <div class="log-f"><button type="button" class="lk" id="logMore" hidden></button>
+      <div class="bulk" id="bulk" hidden><span id="bulkTxt"></span><button type="button" class="btn warn" id="bulkDel" disabled>選んだ記録を消す</button></div></div>
+    <div class="empty" id="logEmpty">まだ記録がありません。地図で、歩き始めた駅から順に駅をタップしてください。</div>
+  </section>
+
+  <div class="lines" id="lines" hidden></div>
+
+  <footer>
+    □ の駅は複数路線が乗り入れる駅（乗換駅）。同じ2駅を結ぶ区間は路線をまたいで共通扱いです（例：JR環状線と大和路線の 天王寺–新今宮）。<br>
+    府外にまたがる路線は大阪府内の駅だけを収録。ケーブルカー・能勢電鉄は対象外です。記録は30秒ごとに自動で最新になります。
+  </footer>
+</div>
+
+<div class="pickbar" id="pickBar" hidden>
+  <div class="pk-txt"><span id="pickTxt"></span><small id="pickMsg"></small></div>
+  <div class="pk-btns"><button type="button" class="go" id="pickGo">記録する</button><button type="button" id="pickBack">1つ戻す</button><button type="button" id="pickX">やめる</button></div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="in">
+    <div class="sh-top">
+      <div class="ttl"><div id="shT"></div><small id="shL"></small></div>
+      <button class="x" id="shX" aria-label="閉じる">✕</button>
+    </div>
+    <div class="state" id="shS"></div>
+    <div class="row"><label for="shD">歩いた日</label><input type="date" id="shD"></div>
+    <div class="row" id="shW" aria-label="歩いた人"></div>
+    <div class="row addname"><input id="shAdd" maxlength="20" placeholder="名前を追加" aria-label="歩いた人の名前を追加"><button type="button" id="shAddB">追加</button></div>
+    <textarea id="shN" placeholder="メモ（寄り道、所要時間など）" aria-label="メモ"></textarea>
+    <div class="btns">
+      <button class="btn" id="shSave">歩いた！と記録</button>
+      <button class="btn warn" id="shDel" hidden>記録を消す</button>
+    </div>
+    <div class="msg" id="shM"></div>
+  </div>
+</div>
+
+<script>
+const G=['Osaka Metro','JR西日本','阪急','阪神','京阪','近鉄','南海','その他'];
+const L=[
+ ['Osaka Metro','御堂筋線','M','#E5171F','江坂 東三国 新大阪 西中島南方 中津 梅田 淀屋橋 本町 心斎橋 なんば 大国町 動物園前 天王寺 昭和町 西田辺 長居 あびこ 北花田 新金岡 なかもず'],
+ ['Osaka Metro','谷町線','T','#522886','大日 守口 太子橋今市 千林大宮 関目高殿 野江内代 都島 天神橋筋六丁目 中崎町 東梅田 南森町 天満橋 谷町四丁目 谷町六丁目 谷町九丁目 四天王寺前夕陽ケ丘 天王寺 阿倍野 文の里 田辺 駒川中野 平野 喜連瓜破 出戸 長原 八尾南'],
+ ['Osaka Metro','四つ橋線','Y','#0078BA','西梅田 肥後橋 本町 四ツ橋 なんば 大国町 花園町 岸里 玉出 北加賀屋 住之江公園'],
+ ['Osaka Metro','中央線','C','#019A66','夢洲 コスモスクエア 大阪港 朝潮橋 弁天町 九条 阿波座 本町 堺筋本町 谷町四丁目 森ノ宮 緑橋 深江橋 高井田 長田'],
+ ['Osaka Metro','千日前線','S','#E44D93','野田阪神 玉川 阿波座 西長堀 桜川 なんば 日本橋 谷町九丁目 鶴橋 今里 新深江 小路 北巽 南巽'],
+ ['Osaka Metro','堺筋線','K','#814721','天神橋筋六丁目 扇町 南森町 北浜 堺筋本町 長堀橋 日本橋 恵美須町 動物園前 天下茶屋'],
+ ['Osaka Metro','長堀鶴見緑地線','N','#8DB63C','大正 ドーム前千代崎 西長堀 西大橋 心斎橋 長堀橋 松屋町 谷町六丁目 玉造 森ノ宮 大阪ビジネスパーク 京橋 蒲生四丁目 今福鶴見 横堤 鶴見緑地 門真南'],
+ ['Osaka Metro','今里筋線','I','#EE7B1A','井高野 瑞光四丁目 だいどう豊里 太子橋今市 清水 新森古市 関目成育 蒲生四丁目 鴫野 緑橋 今里'],
+ ['Osaka Metro','ニュートラム','P','#00A3D9','コスモスクエア トレードセンター前 中ふ頭 ポートタウン西 ポートタウン東 フェリーターミナル 南港東 南港口 平林 住之江公園'],
+ ['JR西日本','大阪環状線','O','#E8603C','大阪 天満 桜ノ宮 京橋 大阪城公園 森ノ宮 玉造 鶴橋 桃谷 寺田町 天王寺 新今宮 今宮 芦原橋 大正 弁天町 西九条 野田 福島 大阪'],
+ ['JR西日本','JRゆめ咲線','P','#2B4C9B','西九条 安治川口 ユニバーサルシティ 桜島'],
+ ['JR西日本','JR京都線','A','#0072BC','大阪 新大阪 東淀川 吹田 岸辺 千里丘 茨木 JR総持寺 摂津富田 高槻 島本'],
+ ['JR西日本','JR神戸線','A','#0072BC','大阪 塚本'],
+ ['JR西日本','おおさか東線','F','#2E9A87','大阪 新大阪 南吹田 JR淡路 城北公園通 JR野江 鴫野 放出 高井田中央 JR河内永和 JR俊徳道 JR長瀬 衣摺加美北 新加美 久宝寺'],
+ ['JR西日本','JR東西線','H','#B8238F','京橋 大阪城北詰 大阪天満宮 北新地 新福島 海老江 御幣島 加島'],
+ ['JR西日本','学研都市線','H','#D9508F','京橋 鴫野 放出 徳庵 鴻池新田 住道 野崎 四条畷 忍ケ丘 東寝屋川 星田 河内磐船 津田 藤阪 長尾'],
+ ['JR西日本','大和路線','Q','#009F3C','JR難波 今宮 新今宮 天王寺 東部市場前 平野 加美 久宝寺 八尾 志紀 柏原 高井田 河内堅上'],
+ ['JR西日本','阪和線','R','#F2A900','天王寺 美章園 南田辺 鶴ケ丘 長居 我孫子町 杉本町 浅香 堺市 三国ケ丘 百舌鳥 上野芝 津久野 鳳 富木 北信太 信太山 和泉府中 久米田 下松 東岸和田 東貝塚 和泉橋本 東佐野 熊取 日根野 長滝 新家 和泉砂川 和泉鳥取 山中渓'],
+ ['JR西日本','羽衣線','R','#F2A900','鳳 東羽衣'],
+ ['JR西日本','関西空港線','S','#4D7FC4','日根野 りんくうタウン 関西空港'],
+ ['阪急','京都線','HK','#8C1C2B','十三 南方 崇禅寺 淡路 上新庄 相川 正雀 摂津市 南茨木 茨木市 総持寺 富田 高槻市 上牧 水無瀬'],
+ ['阪急','宝塚線','HK','#A3344A','大阪梅田 中津 十三 三国 庄内 服部天神 曽根 岡町 豊中 蛍池 石橋阪大前 池田'],
+ ['阪急','神戸線','HK','#6E1423','大阪梅田 中津 十三 神崎川'],
+ ['阪急','箕面線','HK','#A3344A','石橋阪大前 桜井 牧落 箕面'],
+ ['阪急','千里線','HK','#8C1C2B','天神橋筋六丁目 柴島 淡路 下新庄 吹田 豊津 関大前 千里山 南千里 山田 北千里'],
+ ['阪神','本線','HS','#0068B7','大阪梅田 福島 野田 淀川 姫島 千船'],
+ ['阪神','なんば線','HS','#3E8DCB','出来島 福 伝法 千鳥橋 西九条 九条 ドーム前 桜川 大阪難波'],
+ ['京阪','本線','KH','#1F4E9C','淀屋橋 北浜 天満橋 京橋 野江 関目 森小路 千林 滝井 土居 守口市 西三荘 門真市 古川橋 大和田 萱島 寝屋川市 香里園 光善寺 枚方公園 枚方市 御殿山 牧野 樟葉'],
+ ['京阪','中之島線','KH','#1F4E9C','中之島 渡辺橋 大江橋 なにわ橋 天満橋'],
+ ['京阪','交野線','KH','#3A73C4','枚方市 宮之阪 星ヶ丘 村野 郡津 交野市 河内森 私市'],
+ ['近鉄','難波線・大阪線','D','#D7262E','大阪難波 近鉄日本橋 大阪上本町 鶴橋 今里 布施 俊徳道 長瀬 弥刀 久宝寺口 近鉄八尾 河内山本 高安 恩智 法善寺 堅下 安堂 河内国分 大阪教育大前'],
+ ['近鉄','奈良線','A','#E2851F','布施 河内永和 河内小阪 八戸ノ里 若江岩田 河内花園 東花園 瓢箪山 枚岡 額田 石切'],
+ ['近鉄','けいはんな線','C','#3BA55C','長田 荒本 吉田 新石切'],
+ ['近鉄','信貴線','J','#D7262E','河内山本 服部川 信貴山口'],
+ ['近鉄','南大阪線','F','#2C8C3A','大阪阿部野橋 河堀口 北田辺 今川 針中野 矢田 河内天美 布忍 高見ノ里 河内松原 恵我ノ荘 高鷲 藤井寺 土師ノ里 道明寺 古市 駒ヶ谷 上ノ太子'],
+ ['近鉄','道明寺線','N','#2C8C3A','道明寺 柏原南口 柏原'],
+ ['近鉄','長野線','O','#2C8C3A','古市 喜志 富田林 富田林西口 川西 滝谷不動 汐ノ宮 河内長野'],
+ ['南海','南海本線','NK','#F08300','難波 新今宮 萩ノ茶屋 天下茶屋 岸里玉出 粉浜 住吉大社 住ノ江 七道 堺 湊 石津川 諏訪ノ森 浜寺公園 羽衣 高石 北助松 松ノ浜 泉大津 忠岡 春木 和泉大宮 岸和田 蛸地蔵 貝塚 二色浜 鶴原 井原里 泉佐野 羽倉崎 吉見ノ里 岡田浦 樽井 尾崎 鳥取ノ荘 箱作 淡輪 みさき公園 孝子'],
+ ['南海','高野線','NK','#C76A00','難波 今宮戎 新今宮 天下茶屋 岸里玉出 帝塚山 住吉東 沢ノ町 我孫子前 浅香山 堺東 三国ヶ丘 百舌鳥八幡 中百舌鳥 白鷺 初芝 萩原天神 北野田 狭山 大阪狭山市 金剛 滝谷 千代田 河内長野 三日市町 美加の台 千早口 天見'],
+ ['南海','汐見橋線','NK','#C76A00','汐見橋 芦原町 木津川 津守 西天下茶屋 岸里玉出'],
+ ['南海','空港線','NK','#F08300','泉佐野 りんくうタウン 関西空港'],
+ ['南海','高師浜線','NK','#F08300','羽衣 伽羅橋 高師浜'],
+ ['南海','多奈川線','NK','#F08300','みさき公園 深日町 深日港 多奈川'],
+ ['南海','泉北線','SB','#1F5BA6','中百舌鳥 深井 泉ヶ丘 栂・美木多 光明池 和泉中央'],
+ ['その他','北大阪急行','M','#D7003A','箕面萱野 箕面船場阪大前 千里中央 桃山台 緑地公園 江坂'],
+ ['その他','大阪モノレール','MO','#0A7BC2','大阪空港 蛍池 柴原阪大前 少路 千里中央 山田 万博記念公園 宇野辺 南茨木 沢良宜 摂津 南摂津 大日 門真市'],
+ ['その他','モノレール彩都線','MO','#0A7BC2','万博記念公園 公園東口 阪大病院前 豊川 彩都西'],
+ ['その他','阪堺線','HN','#00A54F','恵美須町 新今宮駅前 今池 今船 松田町 北天下茶屋 聖天坂 天神ノ森 東玉出 塚西 東粉浜 住吉 住吉鳥居前 細井川 安立町 我孫子道 大和川 高須神社 綾ノ町 神明町 妙国寺前 花田口 大小路 宿院 寺地町 御陵前 東湊 石津北 石津 船尾 浜寺駅前'],
+ ['その他','阪堺上町線','HN','#00A54F','天王寺駅前 阿倍野 松虫 東天下茶屋 北畠 姫松 帝塚山三丁目 帝塚山四丁目 神ノ木 住吉'],
+ ['その他','水間鉄道','MZ','#2E7D6B','貝塚 貝塚市役所前 近義の里 石才 清児 名越 森 三ツ松 三ケ山口 水間観音'],
+].map((a,i)=>({i,g:a[0],n:a[1],c:a[2],col:a[3],s:a[4].split(' ')}));
+
+
+const GEO=[[[34.75876,135.49711],[34.74105,135.4985],[34.73292,135.49856],[34.72658,135.49858],[34.71119,135.49694],[34.70552,135.49831],[34.69229,135.50097],[34.68194,135.49898],[34.67501,135.50033],[34.66721,135.4996],[34.65608,135.4978],[34.64881,135.50441],[34.64655,135.51374],[34.63356,135.51695],[34.62163,135.51515],[34.60987,135.51376],[34.59882,135.51275],[34.58187,135.51647],[34.56745,135.51486],[34.55607,135.50579]],[[34.74885,135.57893],[34.73797,135.56385],[34.73138,135.55493],[34.72381,135.54913],[34.7152,135.5458],[34.70895,135.53814],[34.70909,135.5258],[34.71026,135.51076],[34.70686,135.50525],[34.70103,135.49969],[34.6977,135.51108],[34.6902,135.51663],[34.68191,135.51725],[34.67492,135.51691],[34.66715,135.5158],[34.65854,135.51413],[34.64767,135.51316],[34.64237,135.51198],[34.63604,135.51802],[34.62821,135.52552],[34.62151,135.53304],[34.62108,135.54889],[34.60938,135.55163],[34.60901,135.5658],[34.60243,135.57385],[34.59743,135.58246]],[[34.69964,135.4958],[34.69136,135.49639],[34.68194,135.49898],[34.67411,135.49678],[34.6664,135.49754],[34.65608,135.4978],[34.64437,135.49664],[34.63437,135.49386],[34.6241,135.49053],[34.62132,135.47886],[34.60927,135.47188]],[[34.6497,135.3936],[34.64289,135.41247],[34.65388,135.43434],[34.66103,135.44886],[34.66855,135.46238],[34.67549,135.47375],[34.68148,135.4863],[34.68194,135.49898],[34.68187,135.50691],[34.68191,135.51725],[34.68151,135.53269],[34.68076,135.54524],[34.67909,135.55719],[34.67875,135.57311],[34.67875,135.59192]],[[34.69438,135.47603],[34.68961,135.47619],[34.68148,135.4863],[34.67526,135.48722],[34.66843,135.48884],[34.66721,135.4996],[34.66715,135.50663],[34.66715,135.5158],[34.66603,135.52939],[34.66862,135.54427],[34.66816,135.55384],[34.66153,135.55624],[34.65298,135.55496],[34.64326,135.5533]],[[34.71026,135.51076],[34.70381,135.5108],[34.6977,135.51108],[34.6918,135.50683],[34.68187,135.50691],[34.67464,135.50636],[34.66715,135.50663],[34.65427,135.5051],[34.64881,135.50441],[34.63685,135.49667]],[[34.66586,135.47888],[34.67076,135.47941],[34.67526,135.48722],[34.67544,135.49357],[34.67501,135.50033],[34.67464,135.50636],[34.67548,135.51247],[34.67492,135.51691],[34.67466,135.53025],[34.68151,135.53269],[34.69214,135.52969],[34.69605,135.53425],[34.70037,135.54771],[34.70191,135.56004],[34.70353,135.57274],[34.71075,135.58024],[34.71686,135.59246]],[[34.75982,135.54732],[34.75221,135.54709],[34.74381,135.54441],[34.73138,135.55493],[34.72138,135.56315],[34.7152,135.5583],[34.71298,135.54635],[34.70037,135.54771],[34.69261,135.54523],[34.68076,135.54524],[34.66862,135.54427]],[[34.64289,135.41247],[34.63865,135.41234],[34.63409,135.41742],[34.6309,135.42278],[34.63088,135.42908],[34.61925,135.43496],[34.61383,135.43861],[34.61383,135.44596],[34.61068,135.45858],[34.60927,135.47188]],[[34.7024,135.49519],[34.70492,135.51223],[34.70498,135.52094],[34.69689,135.52996],[34.68858,135.53448],[34.68151,135.53269],[34.67466,135.53025],[34.66603,135.52939],[34.65845,135.52791],[34.64796,135.52344],[34.64767,135.51316],[34.65043,135.5003],[34.65416,135.49298],[34.65861,135.48924],[34.66586,135.47888],[34.6694,135.46235],[34.68269,135.46678],[34.68907,135.47484],[34.69717,135.48656],[34.7024,135.49519]],[[34.68289,135.46565],[34.67342,135.44392],[34.66784,135.4387],[34.66206,135.43214]],[[34.7024,135.49519],[34.73414,135.50185],[34.73938,135.50392],[34.76321,135.52364],[34.77681,135.54161],[34.7915,135.55151],[34.81509,135.56208],[34.82861,135.57778],[34.83773,135.59336],[34.8512,135.61702],[34.88134,135.66339]],[[34.7024,135.49519],[34.71271,135.46884]],[[34.7024,135.49519],[34.73292,135.49856],[34.759,135.5195],[34.73883,135.51653],[34.727,135.5337],[34.70722,135.54336],[34.69261,135.54523],[34.6881,135.5633],[34.67876,135.57236],[34.66428,135.57318],[34.65822,135.57178],[34.64988,135.57761],[34.63833,135.56703],[34.62686,135.56859],[34.62256,135.58399]],[[34.69689,135.52996],[34.69428,135.52554],[34.6974,135.51344],[34.69832,135.49704],[34.69509,135.48593],[34.69544,135.47328],[34.71259,135.45568],[34.7275,135.45418]],[[34.69605,135.53425],[34.69277,135.545],[34.6881,135.5633],[34.69242,135.58139],[34.69885,135.59768],[34.70624,135.6215],[34.71833,135.63694],[34.73013,135.6393],[34.74576,135.64523],[34.75549,135.65328],[34.76735,135.66345],[34.7765,135.68459],[34.80137,135.69795],[34.81447,135.70275],[34.82594,135.71309]],[[34.66357,135.50195],[34.65416,135.49298],[34.65015,135.50108],[34.64655,135.51374],[34.63806,135.5378],[34.63084,135.55161],[34.62689,135.56694],[34.62256,135.58399],[34.61727,135.59714],[34.60025,135.616],[34.58668,135.62341],[34.57147,135.63864],[34.574,135.66296]],[[34.64655,135.51374],[34.63841,135.52376],[34.62555,135.52086],[34.618,135.51709],[34.6109,135.51277],[34.60187,135.50667],[34.59311,135.50303],[34.5853,135.50242],[34.57776,135.49864],[34.56632,135.49274],[34.55832,135.48893],[34.54948,135.47803],[34.54229,135.46811],[34.53167,135.45873],[34.52253,135.45117],[34.51067,135.44151],[34.50018,135.4329],[34.48794,135.42389],[34.46574,135.40538],[34.45734,135.39683],[34.44934,135.38586],[34.44005,135.37305],[34.42738,135.35876],[34.41674,135.35014],[34.40605,135.34109],[34.39075,135.33131],[34.38186,135.31957],[34.37241,135.29908],[34.36029,135.28124],[34.34254,135.26324],[34.32553,135.26974]],[[34.53167,135.45873],[34.53503,135.44282]],[[34.39075,135.33131],[34.41031,135.30012],[34.43585,135.2436]],[[34.72023,135.48248],[34.72566,135.49951],[34.73105,135.51019],[34.73883,135.51653],[34.75087,135.53311],[34.75794,135.53385],[34.77545,135.54566],[34.78641,135.55372],[34.80235,135.56515],[34.81647,135.57582],[34.82726,135.58492],[34.83521,135.59272],[34.8499,135.62327],[34.87202,135.66163],[34.87774,135.66785]],[[34.70552,135.49831],[34.70974,135.49301],[34.72023,135.48248],[34.73725,135.48313],[34.75033,135.4751],[34.76302,135.47511],[34.77108,135.46777],[34.77895,135.4651],[34.78725,135.46207],[34.79464,135.44923],[34.80825,135.44549],[34.82154,135.4258]],[[34.70552,135.49831],[34.70974,135.49301],[34.72023,135.48248],[34.73225,135.47297]],[[34.80825,135.44549],[34.8168,135.4607],[34.82344,135.46579],[34.8344,135.46819]],[[34.71078,135.51128],[34.72844,135.51148],[34.73883,135.51653],[34.74647,135.51989],[34.75968,135.51737],[34.76459,135.50901],[34.77098,135.50614],[34.7789,135.50547],[34.79239,135.50879],[34.80566,135.51543],[34.81987,135.51111]],[[34.70124,135.49675],[34.69717,135.48656],[34.69443,135.47606],[34.69616,135.46525],[34.70447,135.45823],[34.71225,135.44536]],[[34.70717,135.43692],[34.69979,135.44269],[34.68926,135.45156],[34.68546,135.45782],[34.68289,135.46565],[34.67549,135.47375],[34.67027,135.47831],[34.66843,135.48884],[34.66711,135.49914]],[[34.69246,135.50165],[34.69159,135.50663],[34.6902,135.51663],[34.69689,135.52996],[34.70722,135.54336],[34.71252,135.54695],[34.71942,135.55169],[34.72397,135.55474],[34.72787,135.55746],[34.73058,135.55976],[34.73532,135.56527],[34.73731,135.5759],[34.73809,135.58322],[34.73994,135.59148],[34.74296,135.60267],[34.74745,135.61118],[34.76389,135.6206],[34.78461,135.63093],[34.79774,135.63012],[34.81153,135.63947],[34.81617,135.64881],[34.82918,135.65397],[34.84387,135.66558],[34.86198,135.67535]],[[34.6915,135.48737],[34.69392,135.49542],[34.6943,135.50041],[34.69283,135.50659],[34.6902,135.51663]],[[34.81617,135.64881],[34.81365,135.65663],[34.8077,135.65975],[34.80183,135.66422],[34.79438,135.66987],[34.78692,135.67559],[34.77386,135.68562],[34.76767,135.68657]],[[34.66357,135.50195],[34.66715,135.50663],[34.66551,135.52219],[34.66528,135.53061],[34.66479,135.54992],[34.66409,135.56352],[34.65822,135.57178],[34.64988,135.57761],[34.64134,135.58341],[34.63459,135.59055],[34.62978,135.60359],[34.62789,135.61932],[34.61938,135.6244],[34.60975,135.62631],[34.59518,135.62633],[34.58825,135.62733],[34.58021,135.62906],[34.56675,135.63568],[34.55537,135.64514]],[[34.66409,135.56352],[34.66428,135.57318],[34.66394,135.5815],[34.66372,135.58947],[34.66311,135.60832],[34.66271,135.61835],[34.66239,135.62681],[34.66196,135.63914],[34.66958,135.64807],[34.67518,135.65109],[34.68474,135.655]],[[34.67875,135.59192],[34.67863,135.60491],[34.68029,135.62413],[34.68013,135.64086]],[[34.62789,135.61932],[34.62648,135.6411],[34.61997,135.64212]],[[34.64564,135.51453],[34.64117,135.52424],[34.63218,135.52893],[34.62623,135.53115],[34.61697,135.53308],[34.60593,135.53294],[34.58582,135.53551],[34.57782,135.53941],[34.57523,135.54619],[34.57556,135.5571],[34.57359,135.57275],[34.5716,135.5845],[34.57167,135.59405],[34.5716,135.61562],[34.56834,135.6204],[34.55416,135.60909],[34.54575,135.622],[34.53297,135.63763]],[[34.56834,135.6204],[34.58153,135.62496],[34.58668,135.62341]],[[34.55416,135.60909],[34.52265,135.60714],[34.50417,135.60041],[34.5003,135.59635],[34.49199,135.5907],[34.48136,135.58667],[34.46696,135.57919],[34.45099,135.57307]],[[34.66357,135.50195],[34.65043,135.5003],[34.64561,135.49899],[34.63685,135.49667],[34.62829,135.49439],[34.61833,135.49176],[34.61243,135.49012],[34.60535,135.48701],[34.59231,135.48056],[34.58196,135.46875],[34.57049,135.45997],[34.55938,135.45318],[34.55176,135.44913],[34.54124,135.44463],[34.53455,135.44178],[34.52144,135.43272],[34.51452,135.42278],[34.50893,135.4147],[34.50323,135.40664],[34.48864,135.39767],[34.47769,135.39208],[34.46792,135.38491],[34.4603,135.37819],[34.45644,135.37031],[34.44543,135.3579],[34.43272,135.34527],[34.42648,135.33837],[34.41983,135.33074],[34.41115,135.31672],[34.39935,135.29948],[34.3914,135.28976],[34.38457,135.27694],[34.37418,135.26136],[34.36103,135.24017],[34.35132,135.23186],[34.34132,135.21263],[34.33123,135.17816],[34.32399,135.16098],[34.29062,135.15102]],[[34.66357,135.50195],[34.65514,135.50153],[34.65043,135.5003],[34.63685,135.49667],[34.62829,135.49439],[34.62233,135.49841],[34.6133,135.49759],[34.60628,135.49696],[34.60019,135.49689],[34.58932,135.49103],[34.57588,135.48506],[34.56632,135.49274],[34.56058,135.49875],[34.55623,135.50445],[34.55024,135.51315],[34.54232,135.52649],[34.53713,135.53509],[34.52295,135.54318],[34.51673,135.54814],[34.50464,135.55723],[34.49532,135.55931],[34.47958,135.5622],[34.46889,135.56631],[34.45099,135.57307],[34.43672,135.57134],[34.4247,135.57717],[34.41149,135.5902],[34.39756,135.5955]],[[34.66764,135.48616],[34.66052,135.48646],[34.6547,135.48309],[34.647,135.48335],[34.63874,135.48908],[34.62829,135.49439]],[[34.41115,135.31672],[34.41031,135.30012],[34.43585,135.2436]],[[34.53455,135.44178],[34.52887,135.43685],[34.52739,135.43191]],[[34.32399,135.16098],[34.31823,135.148],[34.31739,135.1413],[34.3167,135.13718]],[[34.55623,135.50445],[34.5304,135.49746],[34.4971,135.51157],[34.48509,135.49029],[34.47471,135.47557],[34.46121,135.45606]],[[34.8291,135.4867],[34.8166,135.4935],[34.80748,135.49511],[34.79384,135.49714],[34.77477,135.49528],[34.75876,135.49711]],[[34.7916,135.44182],[34.79464,135.44923],[34.80027,135.45873],[34.80425,135.47551],[34.80748,135.49511],[34.80566,135.51543],[34.80669,135.53023],[34.808,135.55441],[34.80235,135.56515],[34.7939,135.56617],[34.77984,135.56148],[34.76539,135.56857],[34.74948,135.57824],[34.73809,135.58322]],[[34.80669,135.53023],[34.81043,135.53923],[34.81847,135.53],[34.83461,135.52678],[34.85549,135.52293]],[[34.65427,135.5051],[34.64953,135.50333],[34.6457,135.50234],[34.6427,135.50161],[34.6392,135.5009],[34.63651,135.50023],[34.63291,135.49942],[34.6296,135.49799],[34.62678,135.49593],[34.62352,135.49465],[34.61813,135.49259],[34.61448,135.49185],[34.61214,135.49109],[34.60998,135.49122],[34.60571,135.49019],[34.60038,135.48883],[34.59472,135.48676],[34.59049,135.48518],[34.58794,135.48315],[34.58528,135.48012],[34.58344,135.47843],[34.58152,135.47665],[34.57916,135.47445],[34.57644,135.47196],[34.57364,135.46934],[34.57064,135.4666],[34.56474,135.46252],[34.56011,135.45881],[34.55544,135.45507],[34.54991,135.45057],[34.54142,135.44316]],[[34.6462,135.51293],[34.64237,135.51198],[34.63546,135.50985],[34.63254,135.50848],[34.62725,135.50541],[34.62416,135.5032],[34.62057,135.50071],[34.61765,135.49905],[34.61584,135.49696],[34.61448,135.49185]],[[34.44543,135.3579],[34.43946,135.3605],[34.4369,135.36289],[34.4306,135.3682],[34.42479,135.37213],[34.42147,135.37503],[34.41425,135.38189],[34.41114,135.38339],[34.40725,135.38503],[34.40353,135.38558]]];
+
+const norm=s=>s.replace(/ヶ/g,'ケ');
+function fnv(str,seed){let h=seed>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h.toString(16).padStart(8,'0')}
+function keyOf(a,b){const x=[norm(a),norm(b)].sort().join('|');return 's-'+fnv(x,2166136261)+fnv(x,0x9e3779b9)}
+
+const segLines=new Map(), segInfo=new Map(), stCount=new Map();
+L.forEach(l=>{l.keys=[];const seen=new Set();
+  l.s.forEach(n=>{const k=norm(n);if(!seen.has(k)){seen.add(k);stCount.set(k,(stCount.get(k)||0)+1)}});
+  for(let j=0;j<l.s.length-1;j++){const k=keyOf(l.s[j],l.s[j+1]);l.keys.push(k);
+    if(!segLines.has(k)){segLines.set(k,[]);segInfo.set(k,{a:l.s[j],b:l.s[j+1]})}
+    if(!segLines.get(k).includes(l))segLines.get(k).push(l)}});
+const ALL=[...segLines.keys()];
+
+let walked=new Map(), filterCo=null, sel=null, busy=false, route=null, routeMsg='';
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+filterCo=ls.get('owk-co')||null;
+let extraNames=[];try{extraNames=JSON.parse(ls.get('owk-names')||'[]')}catch(e){}
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const splitWho=s=>String(s||'').split('、').map(x=>x.trim()).filter(Boolean);
+
+// サーバー呼び出し（Googleスプレッドシートに保存するApps Script）
+const API_URL=(window.API_URL||'').trim();
+async function api(fn,arg){
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(API_URL))throw new Error('nourl');
+  let r;
+  if(fn==='getRecords')r=await fetch(API_URL+'?action=list&t='+Date.now(),{cache:'no-store'});
+  else r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(fn==='saveRecords'?{action:'saveMany',records:arg}:{action:'deleteMany',keys:arg})});
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'error');
+  return j.records;
+}
+function applyRecords(rows){walked=new Map();(rows||[]).forEach(r=>{if(r.key)walked.set(r.key,r)});
+  $('sync').textContent='最終更新 '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});refresh()}
+async function load(){if(busy)return;try{applyRecords(await api('getRecords'))}
+  catch(e){$('sync').textContent=e.message==='nourl'?'記録の保存先が設定されていません。config.js にウェブアプリのURL（/exec）を入れてください。':'記録を読み込めませんでした。通信を確認して、開き直してください。'}}
+
+function buildLines(){
+  const box=$('lines');box.innerHTML='';
+  L.forEach(l=>{
+    const el=document.createElement('article');el.className='line';el.style.setProperty('--lc',l.col);
+    let t='';
+    l.s.forEach((n,j)=>{
+      if(j>0){const k=l.keys[j-1];t+=`<button class="sg" data-k="${k}" data-l="${l.i}" aria-label="${esc(l.s[j-1])}から${esc(n)}"></button>`}
+      const x=stCount.get(norm(n))>1;
+      t+=`<button type="button" class="st" data-l="${l.i}" data-j="${j}" aria-label="${esc(n)}"><span class="dot${x?' xf':''}"></span><span class="nm" data-n="${esc(norm(n))}">${esc(n)}</span></button>`;
+    });
+    el.innerHTML=`<div class="lh"><div class="badge">${esc(l.c)}</div><h2>${esc(l.n)}<small>${esc(l.g)}</small></h2><div class="cnt"></div></div><div class="scroller"><div class="track">${t}</div></div>`;
+    box.appendChild(el);l.el=el;
+  });
+}
+function buildCos(){
+  const b=$('cos');b.innerHTML='';
+  [null,...G].forEach(g=>{const btn=document.createElement('button');btn.className='co';btn.dataset.g=g||'';
+    btn.innerHTML=`<span>${g||'すべて'}</span><span class="bar"><i></i></span><span class="n"></span>`;
+    btn.onclick=()=>{filterCo=g;ls.set('owk-co',g);refresh()};
+    b.appendChild(btn)});
+}
+function refresh(){
+  const w=ALL.filter(k=>walked.has(k)).length;
+  $('tW').textContent=w;$('tT').textContent=ALL.length;$('tP').textContent=(ALL.length?w/ALL.length*100:0).toFixed(1)+'%';
+  [...$('cos').children].forEach(btn=>{const g=btn.dataset.g||null;
+    const ks=new Set();L.forEach(l=>{if(!g||l.g===g)l.keys.forEach(k=>ks.add(k))});
+    let c=0;ks.forEach(k=>{if(walked.has(k))c++});
+    btn.querySelector('i').style.width=(ks.size?c/ks.size*100:0)+'%';
+    btn.querySelector('.n').textContent=c+'/'+ks.size;
+    btn.setAttribute('aria-pressed',String((g||null)===filterCo));});
+  document.querySelectorAll('.sg').forEach(s=>{const on=walked.has(s.dataset.k);s.classList.toggle('on',on);s.classList.toggle('sel',!!sel&&sel.keys.includes(s.dataset.k));
+    const d=walked.get(s.dataset.k);s.title=on?`歩いた日 ${d.date||''}`:'未踏'});
+  const q=norm($('q').value.trim()), only=$('onlyLeft').checked;
+  L.forEach(l=>{const c=l.keys.filter(k=>walked.has(k)).length, tot=l.keys.length;
+    const cnt=l.el.querySelector('.cnt');cnt.textContent=c===tot?`制覇 ${c}/${tot}`:`${c}/${tot}`;cnt.classList.toggle('done',c===tot);
+    let show=(!filterCo||l.g===filterCo)&&(!only||c<tot);
+    let hit=false;l.el.querySelectorAll('.nm').forEach(n=>{const h=!!q&&n.dataset.n.includes(q);n.classList.toggle('hit',h);if(h)hit=true});
+    l.visMap=show;if(q&&!hit)show=false;l.el.hidden=!show;});
+  nodes.forEach(nd=>{nd.hit=!!q&&nd.key.includes(q)});
+  refreshMap();
+  const rk=new Set(routeKeys()), rp=routeNameSet();
+  document.querySelectorAll('.sg').forEach(s=>s.classList.toggle('route',rk.has(s.dataset.k)&&!sel));
+  document.querySelectorAll('.st').forEach(b=>b.classList.toggle('pick',rp.has(norm(L[+b.dataset.l].s[+b.dataset.j]))));
+  $('pickBar').hidden=!route||!!sel;
+  if(route){const has=route.legs.length;
+    $('pickTxt').textContent=has?`${routeLabel()}（${rk.size}区間）`:`「${curName()}」から。歩いた先の駅をタップ`;
+    $('pickMsg').textContent=routeMsg||(has?'続けて駅をタップ。乗り換えた駅もタップすると、次の路線につながります':'次に、乗り換えた駅か歩き終えた駅をタップ');
+    $('pickGo').hidden=!rk.size;$('pickBack').hidden=!has;}
+  renderLog();
+}
+// 歩いた記録（1回の保存＝1件にまとめる）
+let showAll=false, selMode=false, chosen=new Set(), wkArm=null, bulkArm=false;
+function walks(){const m=new Map();
+  walked.forEach((r,k)=>{if(!segLines.has(k))return;const id=(r.at||'')+'|'+(r.date||'')+'|'+(r.who||'');
+    if(!m.has(id))m.set(id,{id,date:r.date||'',at:r.at||'',who:r.who||'',note:r.note||'',keys:[]});m.get(id).keys.push(k)});
+  return[...m.values()].sort((a,b)=>(b.date+b.at).localeCompare(a.date+a.at))}
+function chainOf(keys){const adj=new Map(),nm=new Map();
+  keys.forEach(k=>{const {a,b}=segInfo.get(k);[[a,b],[b,a]].forEach(([x,y])=>{const kx=norm(x);nm.set(kx,x);if(!adj.has(kx))adj.set(kx,[]);adj.get(kx).push(norm(y))})});
+  const ends=[...adj].filter(([,v])=>v.length===1).map(([k])=>k);
+  if(adj.size!==keys.length+1||ends.length!==2||[...adj.values()].some(v=>v.length>2))return null;
+  const out=[ends[0]];let prev=null,cur=ends[0];
+  while(out.length<adj.size){const nx=adj.get(cur).find(x=>x!==prev);if(!nx)return null;out.push(nx);prev=cur;cur=nx}
+  return out.map(k=>nm.get(k))}
+function walkTitle(w){const c=chainOf(w.keys);
+  if(c){if(c.length<=8)return c.join(' → ');return c.slice(0,3).join(' → ')+' → … → '+c.slice(-2).join(' → ')}
+  const p=w.keys.slice(0,3).map(k=>{const i=segInfo.get(k);return i.a+'–'+i.b});return p.join('、')+(w.keys.length>3?' ほか':'')}
+function walkLines(w){return[...new Set(w.keys.map(k=>segLines.get(k)[0]))]}
+function renderLog(){
+  const all=walks();$('logEmpty').hidden=all.length>0;$('selMode').hidden=!all.length;
+  const ids=new Set(all.map(w=>w.id));[...chosen].forEach(id=>{if(!ids.has(id))chosen.delete(id)});
+  const rows=showAll||selMode?all:all.slice(0,6);
+  $('logBox').classList.toggle('selmode',selMode);$('selMode').setAttribute('aria-pressed',String(selMode));$('selMode').textContent=selMode?'選ぶのをやめる':'選んで消す';
+  const ol=$('log');ol.innerHTML='';
+  rows.forEach(w=>{const li=document.createElement('li');li.className='wk';
+    li.innerHTML=`<label class="chk"><input type="checkbox" aria-label="この記録を選ぶ"></label><div class="wk-main"><div class="wk-t"></div><div class="wk-sub"></div><div class="wk-note"></div></div><div class="wk-btns"><button type="button" class="ed">編集</button><button type="button" class="del">消す</button></div>`;
+    li.querySelector('.wk-t').textContent=walkTitle(w);
+    const sub=li.querySelector('.wk-sub');
+    const dt=document.createElement('span');dt.className='dt';dt.textContent=(w.date||'').replace(/-/g,'/');sub.appendChild(dt);
+    walkLines(w).forEach(l=>{const s=document.createElement('span');s.className='lc';s.style.setProperty('--lc',l.col);s.textContent=l.n;sub.appendChild(s)});
+    const c=document.createElement('span');c.textContent=w.keys.length+'区間';sub.appendChild(c);
+    const who=splitWho(w.who).join('・');if(who){const s=document.createElement('span');s.textContent=who;sub.appendChild(s)}
+    const nt=li.querySelector('.wk-note');nt.textContent=w.note;nt.hidden=!w.note;
+    const cb=li.querySelector('input');cb.checked=chosen.has(w.id);cb.onchange=()=>{cb.checked?chosen.add(w.id):chosen.delete(w.id);bulkArm=false;renderBulk()};
+    li.querySelector('.ed').onclick=()=>openWalk(w);
+    const del=li.querySelector('.del');if(wkArm===w.id){del.classList.add('arm');del.textContent='本当に消す'}
+    del.onclick=async()=>{if(wkArm!==w.id){wkArm=w.id;renderLog();return}
+      del.disabled=true;del.textContent='消しています…';await removeKeys(w.keys);wkArm=null};
+    ol.appendChild(li)});
+  $('logMore').hidden=selMode||all.length<=6;$('logMore').textContent=showAll?'最近の6件だけ表示':`すべて表示（${all.length}件）`;
+  renderBulk();
+}
+function renderBulk(){$('bulk').hidden=!selMode;if(!selMode)return;
+  const ws=walks().filter(w=>chosen.has(w.id)),n=ws.reduce((a,w)=>a+w.keys.length,0);
+  $('bulkTxt').textContent=ws.length?`${ws.length}件（${n}区間）を選択中`:'消したい記録にチェックを入れてください';
+  $('bulkDel').disabled=!ws.length;$('bulkDel').textContent=bulkArm?'本当に消す（もう一度押す）':'選んだ記録を消す'}
+async function removeKeys(keys){busy=true;
+  try{const rows=await api('deleteRecords',keys);busy=false;applyRecords(rows);return true}
+  catch(e){busy=false;$('notice').hidden=false;$('notice').textContent='消せませんでした（'+String(e&&e.message||e).slice(0,120)+'）';renderLog();return false}}
+function openWalk(w){route=null;openSheet(w.keys,{title:walkTitle(w),sub:walkLines(w).map(l=>l.n).join('・'),rec:w})}
+$('selMode').onclick=()=>{selMode=!selMode;chosen.clear();bulkArm=false;wkArm=null;renderLog()};
+$('logMore').onclick=()=>{showAll=!showAll;renderLog()};
+$('bulkDel').onclick=async()=>{if(!bulkArm){bulkArm=true;renderBulk();return}
+  const ks=walks().filter(w=>chosen.has(w.id)).flatMap(w=>w.keys);$('bulkDel').disabled=true;$('bulkDel').textContent='消しています…';
+  if(await removeKeys(ks)){chosen.clear();selMode=false}bulkArm=false;renderLog()};
+// ---- 地図表示 ----
+const SVGNS='http://www.w3.org/2000/svg';
+const LAT0=34.68,LON0=135.5,KX=111.32*Math.cos(LAT0*Math.PI/180),KY=110.57;
+const proj=([la,lo])=>[(lo-LON0)*KX,(LAT0-la)*KY];
+const nodes=[];
+L.forEach((l,li)=>{l.xy=GEO[li].map(proj);l.node=l.s.map((n,j)=>{
+  const [x,y]=l.xy[j];let nd=nodes.find(o=>o.key===norm(n)&&Math.hypot(o.x-x,o.y-y)<0.8);
+  if(!nd){nd={key:norm(n),name:n,x,y,lines:new Set(),hit:false};nodes.push(nd)}
+  nd.lines.add(li);return nd})});
+let view=ls.get('owk-view')||'map';
+const mv={s:20,tx:0,ty:0,W:300,H:300};
+let mSegs=[];
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e}
+function buildMap(){
+  const gS=$('mSeg'),gN=$('mNodes'),gT=$('mLabels');
+  L.forEach((l,li)=>{l.keys.forEach((k,j)=>{const [x1,y1]=l.xy[j],[x2,y2]=l.xy[j+1];
+    const e=el('line',{x1,y1,x2,y2,class:'ms',stroke:l.col});e.dataset.k=k;e.dataset.l=li;gS.appendChild(e);mSegs.push(e)})});
+  nodes.forEach(nd=>{nd.c=el('circle',{cx:nd.x,cy:nd.y,r:.1,class:'mn'+(nd.lines.size>1?' xf':'')});gN.appendChild(nd.c);
+    nd.t=el('text',{x:nd.x,y:nd.y,class:'ml'});nd.t.textContent=nd.name;gT.appendChild(nd.t)});
+}
+function mapSize(){const r=$('map').getBoundingClientRect();mv.W=r.width||300;mv.H=r.height||300}
+function fitTo(pts){mapSize();if(!pts.length)return;
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  mv.s=Math.min(mv.W/Math.max(x1-x0,1),mv.H/Math.max(y1-y0,1))*.9;mv.tx=mv.W/2-(x0+x1)/2*mv.s;mv.ty=mv.H/2-(y0+y1)/2*mv.s;applyMap()}
+function fitVisible(){const pts=[];L.forEach(l=>{if(l.visMap)l.xy.forEach(p=>pts.push(p))});fitTo(pts.length?pts:nodes.map(n=>[n.x,n.y]))}
+function fitCity(){const pts=[];L.forEach(l=>{if(l.g==='Osaka Metro'&&l.c!=='P')l.xy.forEach(p=>pts.push(p))});fitTo(pts)}
+let mapRaf=0;
+function applyMap(){$('mg').setAttribute('transform',`translate(${mv.tx},${mv.ty}) scale(${mv.s})`);
+  if(!mapRaf)mapRaf=requestAnimationFrame(()=>{mapRaf=0;styleNodes()})}
+function styleNodes(){const s=mv.s, rp=routeNameSet(), placed=[];
+  nodes.forEach(nd=>{nd.vis=[...nd.lines].some(li=>L[li].visMap);nd.pick=rp.has(nd.key);const x=nd.lines.size>1;
+    nd.c.style.display=nd.vis?'':'none';nd.c.setAttribute('r',(nd.pick?7:x?5:3.6)/s);nd.c.setAttribute('stroke-width',(nd.pick?3:x?2:1.5)/s);
+    nd.c.classList.toggle('pick',nd.pick);nd.c.classList.toggle('hit',nd.hit);nd.t.style.display='none'});
+  const pr=nd=>nd.pick||nd.hit?0:nd.lines.size>1?1:2;
+  [...nodes].sort((a,b)=>pr(a)-pr(b)).forEach(nd=>{if(!nd.vis)return;const p=pr(nd);
+    if(p===1&&s<8||p===2&&s<20)return;
+    const fs=p===0?13:p===1?12:11, sx=nd.x*s+mv.tx+7, sy=nd.y*s+mv.ty-6, w=[...nd.name].length*fs+2;
+    if(sx>mv.W||sx+w<0||sy<0||sy-fs>mv.H)return;
+    const box=[sx-2,sy-fs-1,sx+w,sy+3];
+    if(p>0&&placed.some(o=>box[0]<o[2]&&box[2]>o[0]&&box[1]<o[3]&&box[3]>o[1]))return;
+    placed.push(box);nd.t.style.display='';
+    nd.t.setAttribute('font-size',fs/s);nd.t.setAttribute('stroke-width',3.5/s);
+    nd.t.setAttribute('x',nd.x+7/s);nd.t.setAttribute('y',nd.y-6/s);nd.t.classList.toggle('pk',p===0)});
+}
+function refreshMap(){
+  const rk=new Set(routeKeys());
+  mSegs.forEach(e=>{const l=L[+e.dataset.l];e.style.display=l.visMap?'':'none';e.classList.toggle('on',walked.has(e.dataset.k))});
+  const gR=$('mRoute');gR.innerHTML='';
+  if(route)route.legs.forEach(g=>{if(g.free){const A=nodes.find(o=>o.key===norm(g.from)),B=nodes.find(o=>o.key===norm(g.to));
+    if(A&&B)gR.appendChild(el('line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,class:'mr free'}));return}
+    if(g.li==null)return;const l=L[g.li];for(let j=Math.min(g.a,g.b);j<Math.max(g.a,g.b);j++){
+    const [x1,y1]=l.xy[j],[x2,y2]=l.xy[j+1];gR.appendChild(el('line',{x1,y1,x2,y2,class:'mr'}))}});
+  styleNodes();
+}
+function setView(v){view=v;ls.set('owk-view',v);
+  $('mapBox').hidden=v!=='map';$('lines').hidden=v==='map';
+  $('vMap').setAttribute('aria-pressed',String(v==='map'));$('vList').setAttribute('aria-pressed',String(v!=='map'));
+  if(v==='map'){mapSize();applyMap()}}
+// 操作（ドラッグで移動、ピンチ・ホイールで拡大、タップで駅を選ぶ）
+(function(){
+  const svg=$('map');const pts=new Map();let moved=0,t0=0,last=null;
+  const pos=e=>{const r=svg.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  function zoomAt(px,py,f){const ns=Math.min(400,Math.max(1.2,mv.s*f));f=ns/mv.s;mv.tx=px-(px-mv.tx)*f;mv.ty=py-(py-mv.ty)*f;mv.s=ns;applyMap()}
+  window.zoomMap=f=>{mapSize();zoomAt(mv.W/2,mv.H/2,f)};
+  svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId);pts.set(e.pointerId,pos(e));if(pts.size===1){moved=0;t0=Date.now()}last=null});
+  svg.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const p=pos(e),o=pts.get(e.pointerId);pts.set(e.pointerId,p);
+    if(pts.size===1){mv.tx+=p[0]-o[0];mv.ty+=p[1]-o[1];moved+=Math.abs(p[0]-o[0])+Math.abs(p[1]-o[1]);applyMap()}
+    else if(pts.size===2){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]),m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+      if(last){mv.tx+=m[0]-last.m[0];mv.ty+=m[1]-last.m[1];zoomAt(m[0],m[1],d/last.d)}last={d,m};moved+=99}});
+  const up=e=>{if(!pts.has(e.pointerId))return;const p=pts.get(e.pointerId);pts.delete(e.pointerId);last=null;
+    if(pts.size===0&&moved<8&&Date.now()-t0<600)tapAt(p[0],p[1])};
+  svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',e=>{pts.delete(e.pointerId);last=null;moved=99});
+  svg.addEventListener('wheel',e=>{e.preventDefault();const p=pos(e);zoomAt(p[0],p[1],Math.exp(-e.deltaY*0.0015))},{passive:false});
+  function tapAt(px,py){let best=null,bd=24;
+    nodes.forEach(nd=>{if(nd.c.style.display==='none')return;const d=Math.hypot(nd.x*mv.s+mv.tx-px,nd.y*mv.s+mv.ty-py);if(d<bd){bd=d;best=nd}});
+    if(best){onStationName(best.name,null);return}
+    if(route)return;
+    let bk=null;bd=14;const wx=(px-mv.tx)/mv.s,wy=(py-mv.ty)/mv.s;
+    mSegs.forEach(e=>{if(e.style.display==='none'||!walked.has(e.dataset.k))return;
+      const x1=+e.getAttribute('x1'),y1=+e.getAttribute('y1'),x2=+e.getAttribute('x2'),y2=+e.getAttribute('y2');
+      const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy||1,u=Math.max(0,Math.min(1,((wx-x1)*dx+(wy-y1)*dy)/L2));
+      const d=Math.hypot(x1+u*dx-wx,y1+u*dy-wy)*mv.s;if(d<bd){bd=d;bk=e.dataset.k}});
+    if(bk){const w=walks().find(w=>w.keys.includes(bk));if(w)openWalk(w)}}
+  window.addEventListener('resize',()=>{if(view==='map'){mapSize();applyMap()}});
+})();
+
+// 記録シート
+let pick=new Set(), delArm=false;
+function knownNames(){const s=new Set(extraNames);walked.forEach(v=>splitWho(v.who).forEach(n=>s.add(n)));return [...s]}
+function renderWho(){
+  const w=$('shW');w.innerHTML='';const names=[...new Set([...knownNames(),...pick])];
+  if(names.length){const lab=document.createElement('label');lab.textContent='歩いた人';w.appendChild(lab)}
+  names.forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip nm-only';b.setAttribute('aria-pressed',String(pick.has(n)));
+    b.textContent=n;b.onclick=()=>{pick.has(n)?pick.delete(n):pick.add(n);b.setAttribute('aria-pressed',String(pick.has(n)))};w.appendChild(b)});
+}
+function openSheet(keys,info){
+  const one=keys.length===1, n=keys.length;
+  const done=keys.filter(k=>walked.has(k)), d=one?walked.get(keys[0]):null;
+  const todo=keys.filter(k=>!walked.has(k));
+  const rec=info&&info.rec;
+  sel={keys,write:rec?keys:(todo.length?todo:keys)};delArm=false;
+  if(one){const inf=segInfo.get(keys[0]);
+    $('shT').textContent=`${inf.a} ⇄ ${inf.b}`;
+    $('shL').textContent=segLines.get(keys[0]).map(x=>x.g+' '+x.n).join(' / ');
+    $('shS').textContent=d?`歩いた区間（${d.date||'日付なし'}）`:'まだ歩いていない区間';
+  }else{
+    $('shT').textContent=info.title;
+    $('shL').textContent=`${info.sub}・${n}区間`;
+    $('shS').textContent=!done.length?`${n}区間をまとめて記録します`:todo.length?`${n}区間のうち${done.length}区間は記録済みです（そのまま残し、残り${todo.length}区間を記録します）`:`${n}区間すべて記録済みです`;
+  }
+  if(rec)$('shS').textContent=`この記録を編集（${n}区間）。日付・歩いた人・メモを直せます`;
+  $('shS').className='state'+(done.length?' on':'');
+  const src=rec||d;
+  $('shD').value=src&&src.date||today();$('shN').value=src&&src.note||'';
+  pick=new Set(src?splitWho(src.who):knownNames());renderWho();
+  $('shSave').textContent=one?(d?'記録を更新':'歩いた！と記録'):(todo.length?`${todo.length}区間を記録`:`${n}区間を上書きして記録`);
+  if(rec)$('shSave').textContent='変更を保存';
+  $('shSave').disabled=false;
+  $('shDel').hidden=!done.length;$('shDel').textContent=rec?`この記録（${n}区間）を消す`:one?'記録を消す':`記録済みの${done.length}区間を消す`;$('shDel').disabled=false;
+  $('shM').textContent='';$('sheet').hidden=false;refresh();
+}
+function curName(){if(!route)return'';const g=route.legs[route.legs.length-1];return g?g.to:route.start}
+function routeKeys(){if(!route)return[];const s=new Set();route.legs.forEach(g=>g.keys.forEach(k=>s.add(k)));return[...s]}
+function routeNames(){return routeSteps().map(s=>s.n)}
+// ルートの駅の並び（free: 駅間ではない移動でたどり着いた駅）
+function routeSteps(){if(!route)return[];const a=[{n:route.start}];
+  route.legs.forEach(g=>{const last=a[a.length-1].n;
+    if(g.from&&norm(g.from)!==norm(last))a.push({n:g.from});
+    if(norm(g.to)!==norm(a[a.length-1].n))a.push({n:g.to,free:!!g.free})});return a}
+function routeLabel(){return routeSteps().map((s,i)=>(i?(s.free?' ⋯ ':' → '):'')+s.n).join('')}
+function routeNameSet(){return new Set(routeNames().map(norm))}
+function idxOf(l,n){const k=norm(n),r=[];l.s.forEach((x,i)=>{if(norm(x)===k)r.push(i)});return r}
+// 名前が違っても歩いて乗り換えられる駅（同じ駅として扱う）
+const XFER=[['なんば','難波','大阪難波','JR難波'],['梅田','大阪梅田','大阪','西梅田','東梅田','北新地'],['天王寺','大阪阿部野橋','天王寺駅前'],
+ ['日本橋','近鉄日本橋'],['新今宮','動物園前','新今宮駅前'],['谷町九丁目','大阪上本町'],['淀屋橋','大江橋'],['北浜','なにわ橋'],['肥後橋','渡辺橋'],
+ ['天満','扇町'],['南森町','大阪天満宮'],['中百舌鳥','なかもず'],['野田','野田阪神','海老江'],['福島','新福島'],['住吉大社','住吉鳥居前'],
+ ['JR淡路','淡路'],['JR野江','野江','野江内代'],['JR長瀬','長瀬'],['JR俊徳道','俊徳道'],['JR河内永和','河内永和'],['高井田中央','高井田'],
+ ['JR総持寺','総持寺'],['摂津富田','富田'],['高槻','高槻市'],['西中島南方','南方'],['ドーム前','ドーム前千代崎'],['浜寺公園','浜寺駅前'],
+ ['羽衣','東羽衣'],['汐見橋','桜川'],['芦原町','芦原橋'],['千林','千林大宮'],['関目','関目高殿','関目成育'],['守口市','守口'],['九条']];
+const xg=new Map();XFER.forEach(g=>{const s=new Set(g.map(norm));s.forEach(n=>xg.set(n,s))});
+const same=(a,b)=>norm(a)===norm(b)||(xg.has(norm(a))&&xg.get(norm(a)).has(norm(b)));
+function idxGroup(l,n){const r=[];l.s.forEach((x,i)=>{if(same(x,n))r.push(i)});return r}
+function bestLeg(a,b,li){
+  const has=l=>idxGroup(l,a).length&&idxOf(l,b).length;
+  const cand=(li!=null&&has(L[li]))?[L[li]]:L.filter(has);let best=null;
+  cand.forEach(l=>idxGroup(l,a).forEach(x=>idxOf(l,b).forEach(y=>{const n=Math.abs(x-y);
+    if(!best||n<best.n)best={n,li:l.i,a:x,b:y,from:l.s[x],to:l.s[y],keys:l.keys.slice(Math.min(x,y),Math.max(x,y))}})));
+  return best;
+}
+function onStationName(name,li){
+  if(sel)closeSheet();routeMsg='';
+  if(!route){route={start:name,legs:[]};refresh();return}
+  const cur=curName();
+  if(norm(name)===norm(cur)){if(!route.legs.length)route=null;refresh();return}
+  if(same(name,cur)){route.legs.push({li:null,from:cur,to:name,keys:[]});refresh();return}
+  const leg=bestLeg(cur,name,li);
+  if(!leg){route.legs.push({li:null,from:cur,to:name,keys:[],free:true});
+    routeMsg=`「${cur}」⋯「${name}」は駅間ではないので、記録には数えずにつなぎました。違う場合は「1つ戻す」`;
+    refresh();return}
+  route.legs.push(leg);refresh();
+}
+function openRoute(){if(!route||!routeKeys().length)return;
+  const lines=[...new Set(route.legs.filter(g=>g.li!=null).map(g=>L[g.li].n))];
+  openSheet(routeKeys(),{title:routeLabel(),sub:lines.join('・')})}
+function closeSheet(){$('sheet').hidden=true;sel=null;refresh()}
+function addName(){const n=$('shAdd').value.replace(/[、,]/g,'').trim().slice(0,20);if(!n)return;
+  if(!extraNames.includes(n)){extraNames.push(n);ls.set('owk-names',JSON.stringify(extraNames))}
+  pick.add(n);$('shAdd').value='';renderWho()}
+$('shAddB').onclick=addName;$('shAdd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addName()}});
+$('shX').onclick=closeSheet;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('ov').hidden)$('ov').hidden=true;else if(sel)closeSheet();else if(route){route=null;refresh()}}});
+$('lines').addEventListener('click',e=>{const st=e.target.closest('.st');if(st){onStationName(L[+st.dataset.l].s[+st.dataset.j],+st.dataset.l);return}
+  const s=e.target.closest('.sg');if(s){if(route&&route.legs.length)return;route=null;openSheet([s.dataset.k])}});
+$('pickX').onclick=()=>{route=null;routeMsg='';refresh()};
+$('pickBack').onclick=()=>{if(!route)return;routeMsg='';if(route.legs.length)route.legs.pop();else route=null;refresh()};
+$('pickGo').onclick=openRoute;
+$('q').addEventListener('input',refresh);$('onlyLeft').addEventListener('change',refresh);
+$('shSave').onclick=async()=>{if(!sel)return;
+  const date=$('shD').value||today(), who=[...pick].join('、'), note=$('shN').value.slice(0,500);
+  const recs=sel.write.map(k=>{const inf=segInfo.get(k);return{key:k,a:inf.a,b:inf.b,line:segLines.get(k).map(x=>x.g+' '+x.n).join(' / '),date,who,note}});
+  $('shSave').disabled=true;$('shM').textContent='保存中…';busy=true;
+  try{const rows=await api('saveRecords',recs);busy=false;route=null;applyRecords(rows);closeSheet()}
+  catch(e){busy=false;$('shSave').disabled=false;$('shM').textContent=e.message==='nourl'?'記録の保存先が設定されていません（config.js）。':'保存できませんでした（'+String(e&&e.message||e).slice(0,120)+'）'}};
+$('shDel').onclick=async()=>{if(!sel)return;
+  if(!delArm){delArm=true;$('shDel').textContent='本当に消す（もう一度押す）';return}
+  const ks=sel.keys.filter(k=>walked.has(k));
+  $('shDel').disabled=true;busy=true;
+  try{const rows=await api('deleteRecords',ks);busy=false;route=null;applyRecords(rows);closeSheet()}
+  catch(e){busy=false;$('shDel').disabled=false;$('shM').textContent='消せませんでした（'+String(e&&e.message||e).slice(0,120)+'）'}};
+
+// 画像保存
+let imgUrl=null;
+async function drawMapView(){
+  try{await document.fonts.ready}catch(e){}
+  mapSize();const K=2,W=Math.round(mv.W),H=Math.round(mv.H),HEAD=70;
+  const cv=document.createElement('canvas');cv.width=W*K;cv.height=(H+HEAD)*K;const x=cv.getContext('2d');x.scale(K,K);
+  const F='"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif',M='"Azeret Mono",ui-monospace,monospace';
+  x.fillStyle='#FFFFFF';x.fillRect(0,0,W,H+HEAD);
+  const w=ALL.filter(k=>walked.has(k)).length;
+  x.fillStyle='#17202B';x.font=`900 22px ${F}`;x.fillText('大阪 駅間ウォーク',14,30);
+  x.font=`700 15px ${M}`;x.fillText(`${w} / ${ALL.length} 区間  ${(w/ALL.length*100).toFixed(1)}%`,14,54);
+  x.font=`500 12px ${F}`;x.fillStyle='#687482';x.textAlign='right';x.fillText(today().replace(/-/g,'.')+' 時点',W-14,54);x.textAlign='left';
+  x.save();x.beginPath();x.rect(0,HEAD,W,H);x.clip();x.translate(0,HEAD);
+  const P=(p)=>[p[0]*mv.s+mv.tx,p[1]*mv.s+mv.ty];x.lineCap='round';
+  for(const pass of[0,1])L.forEach(l=>{if(!l.visMap)return;l.keys.forEach((k,j)=>{const on=walked.has(k);if(on!==!!pass)return;
+    const a=P(l.xy[j]),b=P(l.xy[j+1]);x.strokeStyle=l.col;x.globalAlpha=on?1:.33;x.lineWidth=on?6.5:2.5;x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke()})});
+  x.globalAlpha=1;
+  nodes.forEach(nd=>{if(nd.c.style.display==='none')return;const [px,py]=P([nd.x,nd.y]);if(px<-20||py<-20||px>W+20||py>H+20)return;
+    const xf=nd.lines.size>1;x.beginPath();x.arc(px,py,xf?5:3.6,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.lineWidth=xf?2:1.5;x.strokeStyle='#17202B';x.stroke();
+    if(nd.t.style.display!=='none'){x.font=`${xf?700:500} ${xf?12:11}px ${F}`;x.lineWidth=3.5;x.strokeStyle='#fff';x.lineJoin='round';x.strokeText(nd.name,px+7,py-6);x.fillStyle='#17202B';x.fillText(nd.name,px+7,py-6)}});
+  x.restore();
+  x.strokeStyle='#D8DDE3';x.lineWidth=1;x.beginPath();x.moveTo(0,HEAD-.5);x.lineTo(W,HEAD-.5);x.stroke();
+  return await new Promise(r=>cv.toBlob(r,'image/png'));
+}
+async function drawMap(){
+  try{await document.fonts.ready}catch(e){}
+  const lines=L.filter(l=>!l.el.hidden);
+  if(!lines.length)return null;
+  const PAD=40,HEAD=130,LAB=230,STEP=34,CH=15;
+  const rowH=l=>58+Math.max(...l.s.map(n=>[...n].length))*CH+18;
+  const maxSeg=Math.max(...lines.map(l=>l.s.length-1));
+  const W=PAD*2+LAB+maxSeg*STEP+20;
+  const H=PAD+HEAD+lines.reduce((a,l)=>a+rowH(l),0)+70;
+  const s=Math.min(2,Math.sqrt(16e6/(W*H)));
+  const cv=document.createElement('canvas');cv.width=Math.round(W*s);cv.height=Math.round(H*s);
+  const x=cv.getContext('2d');x.scale(s,s);
+  const INK='#17202B',MUT='#687482',TR='#B9C1CA',RULE='#E3E7EC',F='"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif',M='"Azeret Mono",ui-monospace,monospace';
+  x.fillStyle='#FFFFFF';x.fillRect(0,0,W,H);
+  // header
+  const ks=new Set();lines.forEach(l=>l.keys.forEach(k=>ks.add(k)));let wc=0;ks.forEach(k=>{if(walked.has(k))wc++});
+  x.fillStyle=INK;x.font=`900 34px ${F}`;x.textBaseline='alphabetic';x.fillText('大阪 駅間ウォーク',PAD,PAD+38);
+  x.font=`700 26px ${M}`;x.fillText(`${wc} / ${ks.size} 区間  ${(ks.size?wc/ks.size*100:0).toFixed(1)}%`,PAD,PAD+80);
+  x.font=`500 14px ${F}`;x.fillStyle=MUT;
+  x.fillText(`${today().replace(/-/g,'.')} 時点　${filterCo||'全路線'}${$('q').value.trim()?'・「'+$('q').value.trim()+'」を含む路線':''}${$('onlyLeft').checked?'・未踏がある路線':''}`,PAD,PAD+108);
+  // legend
+  const lx=W-PAD-260,ly=PAD+70;
+  x.lineCap='round';x.strokeStyle=INK;x.lineWidth=8;x.beginPath();x.moveTo(lx,ly);x.lineTo(lx+40,ly);x.stroke();
+  x.fillStyle=INK;x.font=`700 14px ${F}`;x.fillText('歩いた',lx+50,ly+5);
+  x.lineCap='butt';x.strokeStyle=TR;x.lineWidth=3;x.setLineDash([5,4]);x.beginPath();x.moveTo(lx+120,ly);x.lineTo(lx+160,ly);x.stroke();x.setLineDash([]);
+  x.fillStyle=MUT;x.fillText('まだ',lx+170,ly+5);
+  let y=PAD+HEAD;
+  lines.forEach((l,ri)=>{
+    const h=rowH(l), cy=y+30, x0=PAD+LAB;
+    x.strokeStyle=RULE;x.lineWidth=1;x.beginPath();x.moveTo(PAD,y);x.lineTo(W-PAD,y);x.stroke();
+    // label
+    x.beginPath();x.arc(PAD+16,cy,15,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.lineWidth=4;x.strokeStyle=l.col;x.stroke();
+    x.fillStyle=INK;x.font=`700 ${l.c.length>1?10:12}px ${M}`;x.textAlign='center';x.textBaseline='middle';x.fillText(l.c,PAD+16,cy+1);
+    x.textAlign='left';x.textBaseline='alphabetic';
+    x.font=`700 17px ${F}`;x.fillText(l.n,PAD+40,cy-2);
+    const c=l.keys.filter(k=>walked.has(k)).length,t=l.keys.length;
+    x.font=`500 12px ${F}`;x.fillStyle=MUT;x.fillText(l.g,PAD+40,cy+16);
+    x.font=`700 12px ${M}`;x.fillStyle=c===t?'#1F8A4C':INK;x.fillText(c===t?`制覇 ${c}/${t}`:`${c}/${t}`,PAD+40,cy+34);
+    // segments
+    l.keys.forEach((k,j)=>{const a=x0+j*STEP,b=a+STEP;
+      if(walked.has(k)){x.strokeStyle=l.col;x.lineWidth=8;x.setLineDash([])}else{x.strokeStyle=TR;x.lineWidth=3;x.setLineDash([5,4])}
+      x.beginPath();x.moveTo(a,cy);x.lineTo(b,cy);x.stroke()});
+    x.setLineDash([]);
+    // stations
+    l.s.forEach((n,j)=>{const px=x0+j*STEP;const xf=stCount.get(norm(n))>1;
+      x.fillStyle='#fff';x.lineWidth=3;
+      if(xf){x.strokeStyle=INK;x.beginPath();x.roundRect?x.roundRect(px-9,cy-7,18,14,5):x.rect(px-9,cy-7,18,14);x.fill();x.stroke()}
+      else{x.strokeStyle=l.col;x.beginPath();x.arc(px,cy,6.5,0,Math.PI*2);x.fill();x.stroke()}
+      x.fillStyle=INK;x.font=`500 13px ${F}`;x.textAlign='center';x.textBaseline='middle';
+      [...n].forEach((ch,ci)=>{const ty=cy+22+ci*CH;
+        if('ー－-〜~'.includes(ch)){x.save();x.translate(px,ty);x.rotate(Math.PI/2);x.fillText(ch,0,0);x.restore()}else x.fillText(ch,px,ty)});
+      x.textAlign='left';x.textBaseline='alphabetic'});
+    y+=h;
+  });
+  x.fillStyle=MUT;x.font=`500 12px ${F}`;x.fillText('□ は乗換駅　大阪府内の駅のみ収録',PAD,H-30);
+  return await new Promise(r=>cv.toBlob(r,'image/png'));
+}
+
+$('imgBtn').onclick=async()=>{
+  const b=$('imgBtn');b.disabled=true;b.textContent='画像を作成中…';
+  let blob=null;try{blob=view==='map'?await drawMapView():await drawMap()}catch(e){}
+  b.disabled=false;b.textContent='路線図を画像で保存';
+  if(!blob){$('notice').hidden=false;$('notice').textContent='表示中の路線がないため画像を作れません。絞り込みを外してください。';return}
+  $('notice').hidden=true;
+  if(imgUrl)URL.revokeObjectURL(imgUrl);imgUrl=URL.createObjectURL(blob);
+  $('ovImg').src=imgUrl;$('ovSave').href=imgUrl;$('ovSave').download=`大阪駅間ウォーク_${today()}.png`;
+  $('ovInfo').textContent=view==='map'?'地図の表示範囲':`表示中の ${L.filter(l=>!l.el.hidden).length} 路線`;$('ov').hidden=false;
+};
+$('ovX').onclick=()=>{$('ov').hidden=true};
+$('ov').addEventListener('click',e=>{if(e.target.id==='ov')$('ov').hidden=true});
+
+buildLines();buildMap();buildCos();
+$('vMap').onclick=()=>{setView('map');refresh()};$('vList').onclick=()=>{setView('list');refresh()};
+$('zIn').onclick=()=>zoomMap(1.6);$('zOut').onclick=()=>zoomMap(1/1.6);$('zCity').onclick=fitCity;$('zAll').onclick=fitVisible;
+setView(view);refresh();fitCity();load();
+setInterval(()=>{if(document.visibilityState==='visible'&&!sel)load()},30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load()});
+</script>
+</body>
+</html>
